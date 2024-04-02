@@ -1,3 +1,5 @@
 static/
 dataset/
 model/
+*.csv
+*.pkl
