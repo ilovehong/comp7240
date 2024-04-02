@@ -33,7 +33,7 @@ recommender = get_recommender()
 
 # Sidebar UI for filters
 st.sidebar.title('Tailor Your Experience')
-st.sidebar.subheader('By JOJO Team 2024')
+st.sidebar.subheader('Presented By JOJO Team')
 
 # User switcher in the sidebar, at the top of the left menu
 user_selection = st.sidebar.selectbox("Switch User Profile:", recommender.get_user_list())
@@ -130,7 +130,7 @@ with recommended_list_tab:
                             color='Metric', 
                             barmode='group',
                             orientation='h',
-                            title='Feature Relevance and Preference Comparison')
+                            title='Feature Match and Strength')
 
                 # Update the figure layout to remove axis titles and the chart title
                 fig.update_layout(
@@ -163,7 +163,7 @@ with recommended_list_tab:
                 if not svd_explanation_subset.empty:
                     # Calculate the width of each bar
                     num_bars = 5  # There are 5 possible star ratings
-                    bar_width = 0.8 / num_bars
+                    bar_width = 2 / num_bars
 
                     # Create x-axis values (stars) as a list
                     x_values = list(range(1, 6))
@@ -188,7 +188,7 @@ with recommended_list_tab:
             if row.score_nn != 0:
                 score_nn = "{:.1f}".format(row.score_nn) if row.score_nn != 0 else 'NA'
                 st.markdown(f"<div style='text-align: center; color: {nn_color};'><span style='font-size: 14px;'>Collaborative NN Rating: {score_nn}</span></div>", unsafe_allow_html=True)
-                st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>This algorithm learns from what users have liked before to suggest new things with strength they might also enjoy.</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>This score is learnt from what users have liked before to suggest new things they might also enjoy.</span></div>", unsafe_allow_html=True)
 
         st.write("---")  # Adds a visual separator for each business listing
 
