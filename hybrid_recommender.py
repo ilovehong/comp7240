@@ -80,11 +80,6 @@ class HybridRecommender:
             'Collaborative NN': 'score_nn'
         }
 
-        if algos is None:
-            print("algo none")
-        else:
-            print(algos)
-
         if user_id is not None:
             review_cache = self.load_dataset('review_cache.pkl')
             new_rating_size = len(new_rating)
@@ -139,11 +134,8 @@ class HybridRecommender:
         if cb_explanation is not None:
             cb_explanation = cb_explanation[cb_explanation['business_id'].isin(top_10_business_ids)]
 
-  
+        if nn_explanation is not None:
+            nn_explanation = nn_explanation[nn_explanation['business_id'].isin(top_10_business_ids)]
+
         return recommend_business, my_review, svd_explanation, cb_explanation, nn_explanation
-
-
-    # Add other methods as needed
-
-
 

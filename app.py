@@ -12,6 +12,8 @@ from sklearn.preprocessing import MinMaxScaler
 # Configure the page to use a wide layout
 st.set_page_config(layout="wide")
 
+st.image("banner.png")
+
 # Use st.cache_data to cache the HybridRecommender instance
 @st.cache_resource
 def get_recommender():
@@ -39,6 +41,19 @@ selected_algorithms = st.sidebar.multiselect(
     default=["Content Based", "Collaborative SVD", "Collaborative NN"]
 )
 
+cb_color = "grey"
+svd_color = "grey"
+nn_color = "grey"
+adj_color = "blue"
+if "Content Based" in selected_algorithms:
+    cb_color = "blue"
+    adj_color = "grey"
+if "Collaborative SVD" in selected_algorithms:
+    svd_color = "blue"  
+    adj_color = "grey"
+if "Collaborative NN" in selected_algorithms:
+    nn_color = "blue"
+    adj_color = "grey"
 
 def get_new_rating():
     new_rating_list = []
@@ -52,45 +67,42 @@ def get_new_rating():
     return pd.DataFrame(new_rating_list, columns=['user_id', 'business_id', 'stars', 'date'])
 
 
-business_df, review_df, svd_explanation_df, cb_explanation_df, nn_explanation = recommender.recommend(user_id=user_selection, categories=selected_categories, new_rating=get_new_rating(), algos=selected_algorithms)
+business_df, review_df, svd_explanation_df, cb_explanation_df, nn_explanation_df = recommender.recommend(user_id=user_selection, categories=selected_categories, new_rating=get_new_rating(), algos=selected_algorithms)
 
 # Tabs for displaying content
 recommended_list_tab, my_rating_tab = st.tabs(["Recommended Top 10", "My Rating Timeline"])
 
 with recommended_list_tab:
     for index, row in enumerate(business_df.itertuples(), start=1):
-        st.markdown(f"<span style='font-size: 18px;'>{row.name} ({row.stars} stars)</span>", unsafe_allow_html=True)
+        weighted_score = "{:.1f}".format(row.weighted_score)
+        # Using HTML for more complex styling
+        st.markdown(f"<span style='font-weight:bold;'>Top Rated {weighted_score} <span style='color: gold;'>★</span> : {row.name}</span>", unsafe_allow_html=True) 
 
-        col1, col2, col3, col4 = st.columns([1, 2 , 1, 1], gap="small")
+        business_col, cb_col, svd_col, nn_col = st.columns([1, 2 , 1, 1], gap="small")
 
-        with col1:
+        with business_col:
             photo_path = os.path.join("static/photos", f"{row.photo_id}.jpg")
             if os.path.exists(photo_path):
                 st.image(photo_path, caption=row.name, width=150)
             else:
                 st.image("static/photos/no-image.jpg", caption="No image available", width=150)
 
-                            # Adjusted Score
+
             if row.adjusted_score != 0:
                 score = "{:.1f}".format(row.adjusted_score)
-                st.markdown(f"<span style='font-size: 14px;'>Adjusted Score: {score}</span>", unsafe_allow_html=True)
-
-            # Weighted Score
-            if row.weighted_score != 0:
-                weighted_score = "{:.1f}".format(row.weighted_score) if row.weighted_score != 0 else 'NA'
-                st.markdown(f"<span style='font-size: 14px;'>Weighted Score: {weighted_score}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='font-size: 14px; color: {adj_color}'>Balanced Rating: {score}</span>", unsafe_allow_html=True)
 
                     # Move the stars slider to the bottom
             unique_key = f"rating_{row.business_id}_{index}"
             user_rating = st.slider("Your rating:", 0, 5, key=unique_key)
 
-        with col2:
+        with cb_col:
 
 
             # Content Based Score
             if row.score_cb != 0:
                 score_cb = "{:.1f}".format(row.score_cb) if row.score_cb != 0 else 'NA'
-                st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>Content Based Score: {score_cb}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align: center; color: {cb_color};'><span style='font-size: 14px;'>Content Based Rating: {score_cb}</span></div>", unsafe_allow_html=True)
 
             if cb_explanation_df is not None:
                 cb_explanation_df_subset = cb_explanation_df[cb_explanation_df['business_id'] == row.business_id]
@@ -123,12 +135,12 @@ with recommended_list_tab:
                 fig.update_layout(height=300, margin=dict(l=0, r=0, t=0, b=0))
                 st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-        with col3:
+        with svd_col:
 
             # Collaborative SVD Score
             if row.score_svd != 0:
                 score_svd = "{:.1f}".format(row.score_svd) if row.score_svd != 0 else 'NA'
-                st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>Collaborative SVD Score: {score_svd}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align: center; color: {svd_color};'><span style='font-size: 14px;'>Collaborative SVD Rating: {score_svd}</span></div>", unsafe_allow_html=True)
 
 
 
@@ -160,15 +172,13 @@ with recommended_list_tab:
                     plot_placeholder.text('No data available')
 
 
-        with col4:
+        with nn_col:
 
             # Collaborative NN Score
             if row.score_nn != 0:
                 score_nn = "{:.1f}".format(row.score_nn) if row.score_nn != 0 else 'NA'
-                st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>Collaborative NN Score: {score_nn}</span></div>", unsafe_allow_html=True)
-
-            if nn_explanation is not None:
-                st.write("<span style='font-size: 12px;'>This algorithm learns from what users have liked before to suggest new things they might also enjoy.</span>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align: center; color: {nn_color};'><span style='font-size: 14px;'>Collaborative NN Rating: {score_nn}</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>This algorithm learns from what users have liked before to suggest new things with strength they might also enjoy.</span></div>", unsafe_allow_html=True)
 
         st.write("---")  # Adds a visual separator for each business listing
 

@@ -130,7 +130,7 @@ class NNRecommender:
                                         callbacks=[early_stopping, model_checkpoint]
                                     )     
 
-        return idx2business, user2idx, collab_model
+        return business2idx, idx2business, user2idx, collab_model
 
 
     def load_dataset(self, file_name):
@@ -147,9 +147,11 @@ class NNRecommender:
  
     def recommend(self, user_id=None, review_cache=None, model_rebuild=False, model_refit=False):
 
-        idx2business, user2idx, model = self.load_data(user_id, review_cache, model_rebuild, model_refit)
+        business2idx, idx2business, user2idx, model = self.load_data(user_id, review_cache, model_rebuild, model_refit)
         useridx = user2idx[user_id]
         scores = {}
+        
+
 
         user_indices = np.array([useridx] * len(idx2business))
         business_indices = np.array(list(range(len(idx2business))))
@@ -170,5 +172,30 @@ class NNRecommender:
         # Convert to DataFrame
         scores_df = pd.DataFrame(sorted_scores, columns=['business_id', 'score_nn'])
 
-        return scores_df, ""
+        # # Convert to DataFrame and take top 10
+        # top_scores_df = scores_df.head(10).copy()
 
+        # # Extract business indices corresponding to the top 20 business IDs
+        # top_business_indices = [business2idx.get(business_id) for business_id in top_scores_df['business_id'].values]
+
+        # # Convert the list of business indices to a NumPy array
+        # top_business_indices_array = np.array(top_business_indices)
+
+        # # Concatenate user and business indices for SHAP analysis
+        # data = np.column_stack((np.array([useridx] * len(top_business_indices)), top_business_indices_array))
+
+        # # Prepare SHAP explainer and compute values
+        # # Adjust the lambda function based on your model's expectation
+        # explainer = shap.KernelExplainer(model=lambda x: model.predict([x[:, 0], x[:, 1]]), data=data)
+        # shap_values = explainer.shap_values(data)
+
+        # # Aggregate SHAP values and create explanations
+        # shap_sum = np.abs(shap_values).sum(axis=1)
+        # shap_sum = np.array(shap_sum).flatten()
+
+        # explanations_df = pd.DataFrame({
+        #     'business_id': top_scores_df['business_id'].values,
+        #     'shap_sum': shap_sum
+        # })
+
+        return scores_df, None
