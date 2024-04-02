@@ -77,10 +77,10 @@ def get_new_rating():
     return pd.DataFrame(new_rating_list, columns=['user_id', 'business_id', 'stars', 'date'])
 
 
-business_df, review_df, svd_explanation_df, cb_explanation_df, nn_explanation_df = recommender.recommend(user_id=user_selection, categories=selected_categories, new_rating=get_new_rating(), algos=selected_algorithms)
+business_df, review_df, svd_explanation_df, cb_explanation_df, nn_explanation_df, item_latent_df = recommender.recommend(user_id=user_selection, categories=selected_categories, new_rating=get_new_rating(), algos=selected_algorithms)
 
 # Tabs for displaying content
-recommended_list_tab, my_rating_tab = st.tabs(["Recommended Top 10", "My Rating Timeline"])
+recommended_list_tab, my_rating_tab, visual_tab = st.tabs(["Recommended Top 10", "My Rating Timeline","Visual Dining Compass"])
 
 with recommended_list_tab:
     for index, row in enumerate(business_df.itertuples(), start=1):
@@ -224,3 +224,23 @@ with my_rating_tab:
                     # Then, display review stars and date below the photo
                     st.write(f"Rating: {review.stars}")
                     st.write(f"Date: {review.date}")
+
+with visual_tab:
+
+    st.write("""
+    Think of this as a 3D map where every point is a restaurant floating in space. 
+    Each position is determined by its unique characteristics—let's call them X, Y, and Z. 
+    Using a technique called SVD, we uncover these hidden qualities and place the restaurants accordingly. 
+    In this colorful universe, the recommended top 10 for you glow in red, highlighting them among the rest in blue. 
+    This visual representation helps you see how these restaurants are closely matched to your tastes.
+    """)
+    fig.update_layout(
+        margin=dict(l=0, r=0, t=0, b=0)  # Adjusts left, right, top, and bottom margins respectively
+    )
+    # Using Plotly Express to create an interactive 3D scatter plot
+    fig = px.scatter_3d(item_latent_df, x='Factor_1', y='Factor_2', z='Factor_3', color='Rank',
+                        color_discrete_map={'High': 'red', 'Low': 'blue'},
+                        hover_data=['business_id'],
+                        height=1200, width=1600)
+
+    st.plotly_chart(fig, use_container_width=True)

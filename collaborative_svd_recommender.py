@@ -48,6 +48,17 @@ class SVDRecommender:
             
             return neighbors_reviews
 
+    def business_to_latent_mapping(self, svd_bias):
+
+            # Extract the inner item IDs and their corresponding latent features
+            item_ids = svd_bias.trainset._raw2inner_id_items.keys()
+            item_latent_features = [svd_bias.qi[svd_bias.trainset.to_inner_iid(iid)] for iid in item_ids]
+
+            # Create the DataFrame
+            df_item_features = pd.DataFrame(item_latent_features, columns=[f'Factor_{i+1}' for i in range(item_latent_features[0].shape[0])])
+            df_item_features['business_id'] = list(item_ids)
+            
+            return df_item_features
     
     def recommend(self, user_id=None, review_cache=None):
 
@@ -56,7 +67,7 @@ class SVDRecommender:
         reader = Reader(rating_scale=(1, 5))
         # load the entire dataset into Surprise
         data = Dataset.load_from_df(unique_reviews[['user_id','business_id','stars']], reader)
-        svd_bias = SVD(n_factors=10, n_epochs = 20, lr_all=0.005, reg_all=0.05, biased=True) # initiate a SVD algorithm object with the bias terms
+        svd_bias = SVD(n_factors=3, n_epochs=40, lr_all=0.005, reg_all=0.1, biased=True) # initiate a SVD algorithm object with the bias terms
         svd_bias.fit(data.build_full_trainset())
 
         # Extract unique business IDs from the DataFrame
@@ -69,11 +80,13 @@ class SVDRecommender:
         predictions = svd_bias.test(testset)
 
         # Converting predictions to a DataFrame
-        df_predictions = pd.DataFrame({
+        predictions_df = pd.DataFrame({
             'business_id': [pred.iid for pred in predictions],
             'score_svd': [pred.est for pred in predictions]
         })
 
         neighbors_reviews = self.get_neighbors_ratings(user_id, svd_bias, review_cache)
 
-        return df_predictions, neighbors_reviews
+        item_latent_df = self.business_to_latent_mapping(svd_bias)
+
+        return predictions_df, neighbors_reviews, item_latent_df

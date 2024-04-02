@@ -98,7 +98,7 @@ class HybridRecommender:
                 my_review['photo_id'] = my_review['photo_id'].fillna('no-image')
 
                 cb_score, cb_explanation = self.content_based_recommender.recommend(user_id=user_id, review_cache=review_cache)
-                svd_score, svd_explanation = self.svd_recommender.recommend(user_id=user_id, review_cache=review_cache)
+                svd_score, svd_explanation, item_latent_df = self.svd_recommender.recommend(user_id=user_id, review_cache=review_cache)
                 nn_score, nn_explanation = self.nn_recommender.recommend(user_id=user_id, review_cache=review_cache, model_rebuild=is_new_user, model_refit=is_new_data)
                 # Example of specifying columns to avoid duplicates
                 all_score = pd.merge(cb_score[['business_id', 'score_cb']], svd_score[['business_id', 'score_svd']], on="business_id", how="inner")
@@ -137,5 +137,7 @@ class HybridRecommender:
         if nn_explanation is not None:
             nn_explanation = nn_explanation[nn_explanation['business_id'].isin(top_10_business_ids)]
 
-        return recommend_business, my_review, svd_explanation, cb_explanation, nn_explanation
+        item_latent_df['Rank'] = item_latent_df['business_id'].apply(lambda x: 'High' if x in top_10_business_ids else 'Low')
+
+        return recommend_business, my_review, svd_explanation, cb_explanation, nn_explanation, item_latent_df
 
