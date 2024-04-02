@@ -9,8 +9,17 @@ import numpy as np
 from hybrid_recommender import HybridRecommender
 from sklearn.preprocessing import MinMaxScaler
 
+
 # Configure the page to use a wide layout
 st.set_page_config(layout="wide")
+
+st.markdown("""
+<style>
+    [data-testid=stSidebar] {
+        background-color: lightblue;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 st.image("banner.png")
 
@@ -24,9 +33,10 @@ recommender = get_recommender()
 
 # Sidebar UI for filters
 st.sidebar.title('Tailor Your Experience')
+st.sidebar.subheader('By JOJO Team 2024')
 
 # User switcher in the sidebar, at the top of the left menu
-user_selection = st.sidebar.selectbox("Change User Profile:", recommender.get_user_list())
+user_selection = st.sidebar.selectbox("Switch User Profile:", recommender.get_user_list())
 
 selected_categories = st.sidebar.multiselect(
     'Pick Your Interest(s):', 
@@ -76,7 +86,7 @@ with recommended_list_tab:
     for index, row in enumerate(business_df.itertuples(), start=1):
         weighted_score = "{:.1f}".format(row.weighted_score)
         # Using HTML for more complex styling
-        st.markdown(f"<span style='font-weight:bold;'>Top Rated {weighted_score} <span style='color: gold;'>★</span> : {row.name}</span>", unsafe_allow_html=True) 
+        st.markdown(f"<span style='font-weight:bold;'>Top Rate {weighted_score} <span style='color: gold;'>★</span> : {row.name}</span>", unsafe_allow_html=True) 
 
         business_col, cb_col, svd_col, nn_col = st.columns([1, 2 , 1, 1], gap="small")
 
