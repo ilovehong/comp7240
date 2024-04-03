@@ -73,6 +73,8 @@ class HybridRecommender:
         cb_explanation = None
         svd_explanation = None
         nn_explanation = None
+        item_latent_df = None
+
         # Mapping of algorithms to score keys
         algo_to_score_key = {
             'Content Based': 'score_cb',
@@ -119,7 +121,7 @@ class HybridRecommender:
                 recommend_business['score_cb'] = 0
                 recommend_business['score_svd'] = 0
                 recommend_business['score_nn'] = 0
-                recommend_business['weighted_score'] = 0
+                recommend_business['weighted_score'] = recommend_business['adjusted_score']
 
         if categories:
             recommend_business = recommend_business[recommend_business['categories'].apply(lambda x: any(category in x.split(', ') for category in categories))]
@@ -137,7 +139,8 @@ class HybridRecommender:
         if nn_explanation is not None:
             nn_explanation = nn_explanation[nn_explanation['business_id'].isin(top_10_business_ids)]
 
-        item_latent_df['Rank'] = item_latent_df['business_id'].apply(lambda x: 'High' if x in top_10_business_ids else 'Low')
+        if item_latent_df is not None:
+            item_latent_df['Rank'] = item_latent_df['business_id'].apply(lambda x: 'High' if x in top_10_business_ids else 'Low')
 
         return recommend_business, my_review, svd_explanation, cb_explanation, nn_explanation, item_latent_df
 

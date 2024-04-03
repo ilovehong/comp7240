@@ -85,8 +85,9 @@ recommended_list_tab, my_rating_tab, visual_tab = st.tabs(["Recommended Top 10",
 with recommended_list_tab:
     for index, row in enumerate(business_df.itertuples(), start=1):
         weighted_score = "{:.1f}".format(row.weighted_score)
+        stars_display = "★" * round(row.weighted_score)
         # Using HTML for more complex styling
-        st.markdown(f"<span style='font-weight:bold;'>Top Rate {weighted_score} <span style='color: gold;'>★</span> : {row.name}</span>", unsafe_allow_html=True) 
+        st.markdown(f"<span style='font-weight:bold;'>Rating {weighted_score} <span style='color: gold;'>{stars_display}</span> : {row.name}</span>", unsafe_allow_html=True) 
 
         business_col, cb_col, svd_col, nn_col = st.columns([1, 2 , 1, 1], gap="small")
 
@@ -100,7 +101,7 @@ with recommended_list_tab:
 
             if row.adjusted_score != 0:
                 score = "{:.1f}".format(row.adjusted_score)
-                st.markdown(f"<span style='font-size: 14px; color: {adj_color}'>Balanced Rating: {score}</span>", unsafe_allow_html=True)
+                st.markdown(f"<span style='font-size: 14px; color: {adj_color}'>Calibrated Rating: {score}</span>", unsafe_allow_html=True)
 
                     # Move the stars slider to the bottom
             unique_key = f"rating_{row.business_id}_{index}"
@@ -118,7 +119,7 @@ with recommended_list_tab:
                 cb_explanation_df_subset = cb_explanation_df[cb_explanation_df['business_id'] == row.business_id]
                 cb_explanation_df_subset = cb_explanation_df_subset[['feature', 'strength', 'match']].head(7)
                 # Initialize the MinMaxScaler with the desired range
-                scaler = MinMaxScaler(feature_range=(1, 10))
+                scaler = MinMaxScaler(feature_range=(1, 5))
                 cb_explanation_df_subset[['strength', 'match']] = scaler.fit_transform(cb_explanation_df_subset[['strength', 'match']])
 
 
@@ -188,59 +189,61 @@ with recommended_list_tab:
             if row.score_nn != 0:
                 score_nn = "{:.1f}".format(row.score_nn) if row.score_nn != 0 else 'NA'
                 st.markdown(f"<div style='text-align: center; color: {nn_color};'><span style='font-size: 14px;'>Collaborative NN Rating: {score_nn}</span></div>", unsafe_allow_html=True)
-                st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>This score is learnt from what users have liked before to suggest new things they might also enjoy.</span></div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>Think of this score as a friend who knows what you like and dislikes. Based on what similar people enjoy, we're here to help you discover your next favorite restaurant with ease and fun.</span></div>", unsafe_allow_html=True)
 
         st.write("---")  # Adds a visual separator for each business listing
 
 
 with my_rating_tab:
-    st.header("My Ratings")
 
-    # Assuming 'review_df' contains columns 'photo_id', 'stars', and 'date'
-    # and that each 'photo_id' corresponds to a photo file name stored in a directory named "static/photos"
-    
     # Calculate the number of rows needed to display 4 businesses per row
     num_reviews = len(review_df)
-    num_rows = (num_reviews + 3) // 4  # Integer division rounded up
+    if num_reviews > 0:
+        num_rows = (num_reviews + 3) // 4  # Integer division rounded up
 
-    for i in range(num_rows):
-        # Create a row of columns for each set of 4 businesses
-        cols = st.columns(4)
-        for j in range(4):
-            # Calculate index of the review in review_df
-            idx = i*4 + j
-            if idx < num_reviews:
-                review = review_df.iloc[idx]
-                with cols[j]:
-                    # Display business photo
-                    photo_path = os.path.join("static/photos", f"{review.photo_id}.jpg")
-                    if os.path.exists(photo_path):
-                        st.image(photo_path, width=150)
-                    else:
-                        st.image("static/photos/no-image.jpg", caption="No image available", width=150)
+        for i in range(num_rows):
+            # Create a row of columns for each set of 4 businesses
+            cols = st.columns(4)
+            for j in range(4):
+                # Calculate index of the review in review_df
+                idx = i*4 + j
+                if idx < num_reviews:
+                    review = review_df.iloc[idx]
+                    with cols[j]:
+                        # Display business photo
+                        photo_path = os.path.join("static/photos", f"{review.photo_id}.jpg")
+                        if os.path.exists(photo_path):
+                            st.image(photo_path, width=150)
+                        else:
+                            st.image("static/photos/no-image.jpg", caption="No image available", width=150)
 
-                    # First, display the business name
-                    st.write(f"**{review.item_name}**")  # Using markdown to bold the name
-                    # Then, display review stars and date below the photo
-                    st.write(f"Rating: {review.stars}")
-                    st.write(f"Date: {review.date}")
+                        # First, display the business name
+                        st.write(f"**{review.item_name}**")  # Using markdown to bold the name
+                        # Then, display review stars and date below the photo
+                        st.write(f"Rating: {review.stars}")
+                        st.write(f"Date: {review.date}")
+    else:
+        st.write("Not sure where to start? Rate anything you've experienced recently and see how your feedback makes a difference!")
 
 with visual_tab:
 
-    st.write("""
-    Think of this as a 3D map where every point is a restaurant floating in space. 
-    Each position is determined by its unique characteristics—let's call them X, Y, and Z. 
-    Using a technique called SVD, we uncover these hidden qualities and place the restaurants accordingly. 
-    In this colorful universe, the recommended top 10 for you glow in red, highlighting them among the rest in blue. 
-    This visual representation helps you see how these restaurants are closely matched to your tastes.
-    """)
-    fig.update_layout(
-        margin=dict(l=0, r=0, t=0, b=0)  # Adjusts left, right, top, and bottom margins respectively
-    )
-    # Using Plotly Express to create an interactive 3D scatter plot
-    fig = px.scatter_3d(item_latent_df, x='Factor_1', y='Factor_2', z='Factor_3', color='Rank',
-                        color_discrete_map={'High': 'red', 'Low': 'blue'},
-                        hover_data=['business_id'],
-                        height=1200, width=1600)
+    if item_latent_df is not None:
+        st.write("""
+        Think of this as a 3D map where every point is a restaurant floating in space. 
+        Each position is determined by its unique characteristics—let's call them X, Y, and Z. 
+        Using a technique called SVD, we uncover these hidden qualities and place the restaurants accordingly. 
+        In this colorful universe, the recommended top 10 for you glow in red, highlighting them among the rest in blue. 
+        This visual representation helps you see how these restaurants are closely matched to your tastes.
+        """)
+        fig.update_layout(
+            margin=dict(l=0, r=0, t=0, b=0)  # Adjusts left, right, top, and bottom margins respectively
+        )
+        # Using Plotly Express to create an interactive 3D scatter plot
+        fig = px.scatter_3d(item_latent_df, x='Factor_1', y='Factor_2', z='Factor_3', color='Rank',
+                            color_discrete_map={'High': 'red', 'Low': 'blue'},
+                            hover_data=['business_id'],
+                            height=1200, width=1600)
 
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.write("Curious about how your tastes map out? Rate something and let's start drawing your personal landscape.")

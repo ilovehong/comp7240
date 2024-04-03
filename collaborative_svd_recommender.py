@@ -60,6 +60,32 @@ class SVDRecommender:
             
             return df_item_features
     
+    def business_to_latent_mapping_enhanced(self, user_id, svd_bias):
+
+        # Retrieve the 3x3 latent matrix for the specified user
+        inner_user_id = svd_bias.trainset.to_inner_uid(user_id)
+        user_latent_matrix = svd_bias.pu[inner_user_id]  # Assuming this is a 3x3 matrix
+
+        # Retrieve the 3x3 latent matrices for all items
+        item_ids = svd_bias.trainset._raw2inner_id_items.keys()
+        items_latent_matrices = [svd_bias.qi[svd_bias.trainset.to_inner_iid(iid)] for iid in item_ids]  # Assuming each is a 3x3 matrix
+
+        # Initialize a list to store the result of element-wise multiplication for each item
+        combined_features_list = []
+
+        for item_matrix in items_latent_matrices:
+            # Perform element-wise multiplication
+            combined_matrix = np.multiply(user_latent_matrix, item_matrix)
+            # Flatten or otherwise process the combined_matrix to fit your visualization needs
+            combined_features_list.append(combined_matrix)
+
+        # Create a DataFrame to hold the combined features for visualization
+        df_combined_features = pd.DataFrame(combined_features_list, columns=[f'Factor_{i+1}' for i in range(3)])
+        df_combined_features['business_id'] = list(item_ids)
+
+        return df_combined_features
+
+
     def recommend(self, user_id=None, review_cache=None):
 
         unique_reviews = review_cache.drop_duplicates(['user_id', 'business_id'], keep='first').reset_index(drop=True)
@@ -87,6 +113,6 @@ class SVDRecommender:
 
         neighbors_reviews = self.get_neighbors_ratings(user_id, svd_bias, review_cache)
 
-        item_latent_df = self.business_to_latent_mapping(svd_bias)
+        item_latent_df = self.business_to_latent_mapping_enhanced(user_id, svd_bias)
 
         return predictions_df, neighbors_reviews, item_latent_df
