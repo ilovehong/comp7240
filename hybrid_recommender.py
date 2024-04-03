@@ -102,7 +102,7 @@ class HybridRecommender:
                 cb_score, cb_explanation = self.content_based_recommender.recommend(user_id=user_id, review_cache=review_cache)
                 svd_score, svd_explanation, item_latent_df = self.svd_recommender.recommend(user_id=user_id, review_cache=review_cache)
                 nn_score, nn_explanation = self.nn_recommender.recommend(user_id=user_id, review_cache=review_cache, model_rebuild=is_new_user, model_refit=is_new_data)
-                # Example of specifying columns to avoid duplicates
+
                 all_score = pd.merge(cb_score[['business_id', 'score_cb']], svd_score[['business_id', 'score_svd']], on="business_id", how="inner")
                 hybrid_score = pd.merge(all_score, nn_score[['business_id', 'score_nn']], on="business_id", how="inner")
 
