@@ -48,42 +48,22 @@ class SVDRecommender:
             
             return neighbors_reviews
 
-    def business_to_latent_mapping(self, svd_bias):
 
-            # Extract the inner item IDs and their corresponding latent features
-            item_ids = svd_bias.trainset._raw2inner_id_items.keys()
-            item_latent_features = [svd_bias.qi[svd_bias.trainset.to_inner_iid(iid)] for iid in item_ids]
+    def business_to_latent_mapping(self, user_id, svd_bias):
+        # Convert user and item matrices to NumPy arrays if they aren't already
+        user_latent_matrix = np.array(svd_bias.pu[svd_bias.trainset.to_inner_uid(user_id)])
+        
+        items_latent_matrices = np.array([svd_bias.qi[svd_bias.trainset.to_inner_iid(iid)] for iid in svd_bias.trainset._raw2inner_id_items.keys()])
 
-            # Create the DataFrame
-            df_item_features = pd.DataFrame(item_latent_features, columns=[f'Factor_{i+1}' for i in range(item_latent_features[0].shape[0])])
-            df_item_features['business_id'] = list(item_ids)
-            
-            return df_item_features
-    
-    def business_to_latent_mapping_enhanced(self, user_id, svd_bias):
-
-        # Retrieve the 3x3 latent matrix for the specified user
-        inner_user_id = svd_bias.trainset.to_inner_uid(user_id)
-        user_latent_matrix = svd_bias.pu[inner_user_id]  # Assuming this is a 3x3 matrix
-
-        # Retrieve the 3x3 latent matrices for all items
-        item_ids = svd_bias.trainset._raw2inner_id_items.keys()
-        items_latent_matrices = [svd_bias.qi[svd_bias.trainset.to_inner_iid(iid)] for iid in item_ids]  # Assuming each is a 3x3 matrix
-
-        # Initialize a list to store the result of element-wise multiplication for each item
-        combined_features_list = []
-
-        for item_matrix in items_latent_matrices:
-            # Perform element-wise multiplication
-            combined_matrix = np.multiply(user_latent_matrix, item_matrix)
-            # Flatten or otherwise process the combined_matrix to fit your visualization needs
-            combined_features_list.append(combined_matrix)
-
-        # Create a DataFrame to hold the combined features for visualization
-        df_combined_features = pd.DataFrame(combined_features_list, columns=[f'Factor_{i+1}' for i in range(3)])
-        df_combined_features['business_id'] = list(item_ids)
+        # Element-wise multiplication and reshaping
+        combined_features_array = np.multiply(user_latent_matrix, items_latent_matrices)
+        
+        # Create a DataFrame directly from the numpy array
+        df_combined_features = pd.DataFrame(combined_features_array, columns=[f'Factor_{i+1}' for i in range(combined_features_array.shape[1])])
+        df_combined_features['business_id'] = list(svd_bias.trainset._raw2inner_id_items.keys())
 
         return df_combined_features
+
 
 
     def recommend(self, user_id=None, review_cache=None):
@@ -113,6 +93,6 @@ class SVDRecommender:
 
         neighbors_reviews = self.get_neighbors_ratings(user_id, svd_bias, review_cache)
 
-        item_latent_df = self.business_to_latent_mapping_enhanced(user_id, svd_bias)
+        item_latent_df = self.business_to_latent_mapping(user_id, svd_bias)
 
         return predictions_df, neighbors_reviews, item_latent_df
