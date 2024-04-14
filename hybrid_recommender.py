@@ -6,6 +6,7 @@ from datetime import datetime
 from content_based_recommender import ContentBasedRecommender
 from collaborative_svd_recommender import SVDRecommender
 from collaborative_nn_recommender import NNRecommender
+from collaborative_knn_recommender import KNNRecommender
 
 class HybridRecommender:
 
@@ -23,6 +24,7 @@ class HybridRecommender:
         self.first_photo = self.photo.groupby('business_id', as_index=False).first()[['business_id', 'photo_id']]
         self.content_based_recommender = ContentBasedRecommender()
         self.svd_recommender = SVDRecommender()
+        self.knn_recommender = KNNRecommender()
         self.nn_recommender = NNRecommender()
 
     def load_dataset(self, file_name):
@@ -72,6 +74,7 @@ class HybridRecommender:
         my_review = None
         cb_explanation = None
         svd_explanation = None
+        knn_explanation = None
         nn_explanation = None
         item_latent_df = None
 
@@ -79,7 +82,8 @@ class HybridRecommender:
         algo_to_score_key = {
             'Content Based': 'score_cb',
             'Collaborative SVD': 'score_svd',
-            'Collaborative NN': 'score_nn'
+            'Collaborative KNN': 'score_knn',
+            'Neural Network': 'score_nn'
         }
 
         if user_id is not None:
@@ -101,9 +105,11 @@ class HybridRecommender:
 
                 cb_score, cb_explanation = self.content_based_recommender.recommend(user_id=user_id, review_cache=review_cache)
                 svd_score, svd_explanation, item_latent_df = self.svd_recommender.recommend(user_id=user_id, review_cache=review_cache)
+                knn_score, knn_explanation = self.knn_recommender.recommend(user_id=user_id, review_cache=review_cache)
                 nn_score, nn_explanation = self.nn_recommender.recommend(user_id=user_id, review_cache=review_cache, model_rebuild=is_new_user, model_refit=is_new_data)
 
                 all_score = pd.merge(cb_score[['business_id', 'score_cb']], svd_score[['business_id', 'score_svd']], on="business_id", how="inner")
+                all_score = pd.merge(all_score, knn_score[['business_id', 'score_knn']], on="business_id", how="inner")
                 hybrid_score = pd.merge(all_score, nn_score[['business_id', 'score_nn']], on="business_id", how="inner")
 
                 # Create a new list based on whether the corresponding algorithm is included
@@ -120,6 +126,7 @@ class HybridRecommender:
             else:
                 recommend_business['score_cb'] = 0
                 recommend_business['score_svd'] = 0
+                recommend_business['score_knn'] = 0
                 recommend_business['score_nn'] = 0
                 recommend_business['weighted_score'] = recommend_business['adjusted_score']
 
@@ -131,7 +138,17 @@ class HybridRecommender:
         top_10_business_ids = set(recommend_business.business_id.unique())
 
         if svd_explanation is not None:
+
             svd_explanation = svd_explanation[svd_explanation['business_id'].isin(top_10_business_ids)]
+            svd_explanation = pd.merge(svd_explanation,
+                     self.business[['business_id', 'name']],
+                     how='left',  # Left join to keep all records from svd_explanation
+                     left_on='factor_id',  # Key in svd_explanation
+                     right_on='business_id', suffixes=('', '_drop'))  # Key in business
+            svd_explanation.drop([col for col in svd_explanation.columns if 'drop' in col], axis=1, inplace=True)
+        
+        if knn_explanation is not None:
+            knn_explanation = knn_explanation[knn_explanation['business_id'].isin(top_10_business_ids)]
 
         if cb_explanation is not None:
             cb_explanation = cb_explanation[cb_explanation['business_id'].isin(top_10_business_ids)]
@@ -142,5 +159,5 @@ class HybridRecommender:
         if item_latent_df is not None:
             item_latent_df['Rank'] = item_latent_df['business_id'].apply(lambda x: 'High' if x in top_10_business_ids else 'Low')
 
-        return recommend_business, my_review, svd_explanation, cb_explanation, nn_explanation, item_latent_df
+        return recommend_business, my_review, svd_explanation, cb_explanation, nn_explanation, item_latent_df, knn_explanation
 

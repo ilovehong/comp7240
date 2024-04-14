@@ -18,36 +18,57 @@ class SVDRecommender:
         # Load the datasets separately
         pass
 
- 
-    def find_k_nearest_neighbors(self, user_id, svd_bias, k=20000):
-        # Convert raw user ID to inner user ID
-        user_inner_id = svd_bias.trainset.to_inner_uid(user_id)
-        
-        # Get the latent features for the user
-        user_latent = svd_bias.pu[user_inner_id]
-        
-        # Compute cosine similarity between this user and all other users
-        similarities = cosine_similarity([user_latent], svd_bias.pu)[0]
-        
-        # Get the top k most similar user indices
-        nearest_neighbors_ids = similarities.argsort()[-k:][::-1]
+    def find_max_positive_contributor(self, contributions, labels):
+        # Find the index of the maximum positive contribution
+        max_index = np.argmax(contributions)
+        max_contribution = contributions[max_index] if contributions[max_index] > 0 else None
+        if max_contribution:
+            return labels[max_index], max_contribution
+        else:
+            return None, None
 
-        # Convert inner user ids to raw user ids
-        nearest_neighbors_raw_ids = [svd_bias.trainset.to_raw_uid(inner_id) for inner_id in nearest_neighbors_ids]
+    def explain_predictions_batch(self, user_id, item_ids, svd_model):
+        try:
+            inner_user_id = svd_model.trainset.to_inner_uid(user_id)
+            user_factors = svd_model.pu[inner_user_id]
+        except KeyError:
+            return pd.DataFrame(), "User ID not found in the dataset"
 
+        all_contributions = []
+        item_labels = [svd_model.trainset.to_raw_iid(iid) for iid in range(len(svd_model.qi))]
 
-        return nearest_neighbors_raw_ids
+        for item_id in item_ids:
+            try:
+                inner_item_id = svd_model.trainset.to_inner_iid(item_id)
+                item_factors = svd_model.qi[inner_item_id]
+                contributions = user_factors * item_factors
+                total_base_prediction = np.dot(user_factors, item_factors)
+                total_prediction = total_base_prediction + svd_model.bi[inner_item_id] + svd_model.bu[inner_user_id] + svd_model.trainset.global_mean
 
+                max_label, max_contribution = self.find_max_positive_contributor(contributions, item_labels)
+                if max_contribution:
+                    all_contributions.append({
+                        'business_id': item_id,
+                        'factor_id': max_label,
+                        'contribution': max_contribution,
+                        'total': total_prediction
+                    })
+                else:
+                    all_contributions.append({
+                        'business_id': item_id,
+                        'factor_id': 'No positive contribution',
+                        'contribution': 0,
+                        'total': total_prediction
+                    })
+            except KeyError:
+                all_contributions.append({
+                    'business_id': item_id,
+                    'factor_id': 'N/A',
+                    'contribution': 'N/A',
+                    'total': 'Item ID not found in the dataset'
+                })
 
-    def get_neighbors_ratings(self, user_id, svd_bias, review_cache):
-            # Assuming the existence of a method to find the k nearest neighbors
-            neighbors_ids = self.find_k_nearest_neighbors(user_id, svd_bias)
-
-            # Filter the reviews for the neighbors' ratings for the specific item
-            neighbors_reviews = review_cache[review_cache['user_id'].isin(neighbors_ids)]
-            
-            return neighbors_reviews
-
+        return pd.DataFrame(all_contributions)
 
     def business_to_latent_mapping(self, user_id, svd_bias):
         # Convert user and item matrices to NumPy arrays if they aren't already
@@ -91,8 +112,8 @@ class SVDRecommender:
             'score_svd': [pred.est for pred in predictions]
         })
 
-        neighbors_reviews = self.get_neighbors_ratings(user_id, svd_bias, review_cache)
+        contributions_df = self.explain_predictions_batch(user_id, all_items, svd_bias)
 
         item_latent_df = self.business_to_latent_mapping(user_id, svd_bias)
 
-        return predictions_df, neighbors_reviews, item_latent_df
+        return predictions_df, contributions_df, item_latent_df
