@@ -134,7 +134,7 @@ class HybridRecommender:
             recommend_business = recommend_business[recommend_business['categories'].apply(lambda x: any(category in x.split(', ') for category in categories))]
 
         recommend_business = recommend_business.head(10)
-        my_review = my_review.head(10)
+        my_review = my_review.head(16)
         top_10_business_ids = set(recommend_business.business_id.unique())
 
         if svd_explanation is not None:

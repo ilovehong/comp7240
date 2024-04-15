@@ -21,7 +21,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.header("US DineFinder")
+st.markdown("<h1 style='text-align: center; color: black;'>US DineFinder</h1>", unsafe_allow_html=True)
 st.image("banner.png")
 
 # Use st.cache_data to cache the HybridRecommender instance
