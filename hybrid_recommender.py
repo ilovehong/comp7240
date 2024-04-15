@@ -61,7 +61,7 @@ class HybridRecommender:
 
         # Concatenate the new user DataFrame with the sorted_users DataFrame
         # Placing the new_user_df at the beginning (top) of the sorted_users DataFrame
-        return pd.concat([new_user_df, sorted_users], ignore_index=True)
+        return pd.concat([sorted_users, new_user_df], ignore_index=True)
 
 
     def get_category_list(self):
