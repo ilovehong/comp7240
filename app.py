@@ -117,8 +117,6 @@ with recommended_list_tab:
         if cb_color == "blue":
             with cb_col:
 
-
-                # Content Based Score
                 if row.score_cb != 0:
                     score_cb = "{:.1f}".format(row.score_cb) if row.score_cb != 0 else 'NA'
                     st.markdown(f"<div style='text-align: center; color: {cb_color};'><span style='font-size: 14px;'>Content Based Rating: {score_cb}</span></div>", unsafe_allow_html=True)
@@ -126,32 +124,40 @@ with recommended_list_tab:
                 if cb_explanation_df is not None:
                     cb_explanation_df_subset = cb_explanation_df[cb_explanation_df['business_id'] == row.business_id]
                     cb_explanation_df_subset = cb_explanation_df_subset[['feature', 'strength', 'match']].head(7)
+
                     # Initialize the MinMaxScaler with the desired range
                     scaler = MinMaxScaler(feature_range=(1, 5))
                     cb_explanation_df_subset[['strength', 'match']] = scaler.fit_transform(cb_explanation_df_subset[['strength', 'match']])
 
+                    # Sort the DataFrame by 'match' in descending order for preference
+                    cb_explanation_df_subset = cb_explanation_df_subset.sort_values(by='match', ascending=True)
 
-                    # Create a long-form DataFrame suitable for Plotly Express
-                    long_df = cb_explanation_df_subset.melt(id_vars=['feature'], value_vars=['strength', 'match'], var_name='Metric', value_name='Value')
-                    fig = px.bar(long_df, 
-                                y='feature', 
-                                x='Value', 
-                                color='Metric', 
-                                barmode='group',
-                                orientation='h',
-                                title='Feature Match and Strength')
+                    # Creating two traces for the bar chart
+                    trace1 = go.Bar(y=cb_explanation_df_subset['feature'], x=-cb_explanation_df_subset['strength'], name='Relevance', orientation='h', marker={'color': 'light green'})
+                    trace2 = go.Bar(y=cb_explanation_df_subset['feature'], x=cb_explanation_df_subset['match'], name='Preference', orientation='h', marker={'color': 'light blue'})
 
-                    # Update the figure layout to remove axis titles and the chart title
+                    fig = go.Figure(data=[trace1, trace2])
+
+                    # Update the layout to center the feature names between the bars
                     fig.update_layout(
-                        xaxis_title='',
-                        yaxis_title='',
-                        xaxis={'visible': True, 'showticklabels': True},
-                        yaxis={'visible': True, 'showticklabels': True},
-                        title=''  # Remove the chart title
+                        barmode='overlay',
+                        title='Tag-based explanation',
+                        xaxis=dict(
+                            title='',
+                            range=[-5, 5],  # Setting the x-axis range to ensure symmetry
+                            tickvals=list(range(-5, 6)),  # Setting tick values for clarity
+                            ticktext=[str(abs(x)) for x in range(-5, 6)]  # Positive labels for all ticks
+                        ),
+                        yaxis=dict(
+                            title='',
+                            visible=True,
+                            showticklabels=True
+                        ),
+                        plot_bgcolor='rgba(0,0,0,0)'  # Transparent background
                     )
-                    # Adjust layout for better readability, if necessary
-                    fig.update_layout(yaxis={'categoryorder':'total ascending'})
-                    fig.update_layout(height=300, margin=dict(l=0, r=0, t=0, b=0))
+
+                    # More layout adjustments for aesthetics
+                    fig.update_layout(height=300, margin=dict(l=0, r=0, t=20, b=0))
                     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
         if svd_color == "blue":
@@ -213,9 +219,10 @@ with recommended_list_tab:
 
                 # Neural Networt Score
                 if row.score_nn != 0:
+                    score_adj = "{:.1f}".format(row.adjusted_score)
                     score_nn = "{:.1f}".format(row.score_nn) if row.score_nn != 0 else 'NA'
                     st.markdown(f"<div style='text-align: center; color: {nn_color};'><span style='font-size: 14px;'>Collaborative NN Rating: {score_nn}</span></div>", unsafe_allow_html=True)
-                    st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>Think of this score as a friend who knows what you like and dislikes. Based on what similar people enjoy, we're here to help you discover your next favorite restaurant with ease and fun.</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align: center;'><span style='font-size: 14px;'>This restaurant is recommended because many users have given a rating of <span style='color: blue;'>{score_adj}</span>.</span></div>", unsafe_allow_html=True)
 
         st.write("---")  # Adds a visual separator for each business listing
 
