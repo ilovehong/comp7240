@@ -166,7 +166,7 @@ with recommended_list_tab:
                 # Collaborative SVD Score
                 if row.score_svd != 0:
                     score_svd = "{:.1f}".format(row.score_svd) if row.score_svd != 0 else 'NA'
-                    st.markdown(f"<div style='text-align: center; color: {svd_color};'><span style='font-size: 14px;'>SVD Biased Rating: {score_svd}</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align: center; color: {svd_color};'><span style='font-size: 14px;'>SVD Based Rating: {score_svd}</span></div>", unsafe_allow_html=True)
 
                 plot_placeholder = st.empty()
 
@@ -185,7 +185,7 @@ with recommended_list_tab:
                 # Collaborative KNN Score
                 if row.score_knn != 0:
                     score_knn = "{:.1f}".format(row.score_knn) if row.score_knn != 0 else 'NA'
-                    st.markdown(f"<div style='text-align: center; color: {knn_color};'><span style='font-size: 14px;'>KNN Item-Based Rating: {score_knn}</span></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align: center; color: {knn_color};'><span style='font-size: 14px;'>KNN Based Rating: {score_knn}</span></div>", unsafe_allow_html=True)
 
                 # Create a placeholder for the plot
                 plot_placeholder = st.empty()

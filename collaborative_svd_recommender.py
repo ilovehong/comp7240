@@ -73,15 +73,27 @@ class SVDRecommender:
     def business_to_latent_mapping(self, user_id, svd_bias):
         # Convert user and item matrices to NumPy arrays if they aren't already
         user_latent_matrix = np.array(svd_bias.pu[svd_bias.trainset.to_inner_uid(user_id)])
+
+        print("user_latent_matrix")
+        print(user_latent_matrix)
         
         items_latent_matrices = np.array([svd_bias.qi[svd_bias.trainset.to_inner_iid(iid)] for iid in svd_bias.trainset._raw2inner_id_items.keys()])
 
+        print("items_latent_matrices")
+        print(items_latent_matrices)
+
         # Element-wise multiplication and reshaping
         combined_features_array = np.multiply(user_latent_matrix, items_latent_matrices)
-        
+    
+        print("combined_features_array")
+        print(combined_features_array)
+
         # Create a DataFrame directly from the numpy array
         df_combined_features = pd.DataFrame(combined_features_array, columns=[f'Factor_{i+1}' for i in range(combined_features_array.shape[1])])
         df_combined_features['business_id'] = list(svd_bias.trainset._raw2inner_id_items.keys())
+
+        print("df_combined_features")
+        print(df_combined_features)
 
         return df_combined_features
 
